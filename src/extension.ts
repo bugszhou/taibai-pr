@@ -1,25 +1,32 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import * as gitParse from "git-url-parse";
+import * as getGitOriginUrl from "gitconfiglocal";
+import { join } from "path";
 
-// this method is called when your extension is activated
-// your extension is activated the very first time the command is executed
+const open = require("opn");
+
 export function activate(context: vscode.ExtensionContext) {
-	
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "taibai-pr" is now active!');
+  let disposable = vscode.commands.registerCommand(
+    "taibai-pr.openPr",
+    () => {
+      const rootPath = vscode.workspace.workspaceFolders?.[0].uri.path || "";
+      getGitOriginUrl(rootPath, (err: any, config: any) => {
+        if (err) {
+          vscode.window.showErrorMessage("无法获取远程仓库URL");
+          return;
+        }
+        const gitUrl = gitParse(config?.remote?.origin?.url)
+          .toString("https")
+          .replace(/(\.git)$/, "");
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('taibai-pr.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from taibai-pr!');
-	});
+        open(join(gitUrl, "/-/merge_requests"));
+      });
+    },
+  );
 
-	context.subscriptions.push(disposable);
+  context.subscriptions.push(disposable);
 }
 
 // this method is called when your extension is deactivated
